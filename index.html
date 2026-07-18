@@ -1,0 +1,198 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bus Tracker</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Inter, system-ui, sans-serif;
+      background: #f4f7fb;
+      color: #1f2937;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background-image: radial-gradient(circle at top left, rgba(56, 189, 248, 0.15), transparent 36%),
+        radial-gradient(circle at bottom right, rgba(168, 85, 247, 0.12), transparent 32%);
+    }
+
+    .tracker {
+      width: min(540px, 100%);
+      background: #ffffff;
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+    }
+
+    .tracker h1 {
+      margin: 0 0 12px;
+      font-size: 2rem;
+      letter-spacing: -0.03em;
+    }
+
+    .tracker p.lead {
+      margin: 0 0 24px;
+      color: #475569;
+      line-height: 1.7;
+    }
+
+    .card {
+      padding: 24px;
+      border-radius: 18px;
+      background: #f8fafc;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+    }
+
+    .card .status {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+      font-size: 0.95rem;
+      color: #334155;
+    }
+
+    .metric {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .metric label {
+      font-size: 0.85rem;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+    }
+
+    .metric .value {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 20px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #ffffff;
+      background: #2563eb;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    button:hover,
+    button:focus-visible {
+      background: #1d4ed8;
+      outline: none;
+    }
+
+    .error {
+      color: #b91c1c;
+      margin-top: 18px;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="tracker">
+    <h1>Live Bus Tracker</h1>
+    <p class="lead">Track the bus location in real time. Data refreshes automatically every 3 seconds.</p>
+
+    <section class="card">
+      <div class="status">
+        <span id="status">Waiting for the first update...</span>
+        <span id="updated">--:--:--</span>
+      </div>
+
+      <div class="metric">
+        <label>Latitude</label>
+        <div id="latitude" class="value">--</div>
+      </div>
+
+      <div class="metric">
+        <label>Longitude</label>
+        <div id="longitude" class="value">--</div>
+      </div>
+
+      <div class="metric">
+        <label>Location message</label>
+        <div id="location" class="value">Fetching location...</div>
+      </div>
+
+      <div class="actions">
+        <button id="refreshButton" type="button">Refresh now</button>
+      </div>
+
+      <p id="error" class="error" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script>
+    const endpoint = 'http://127.0.0.1:5000/location';
+    const statusEl = document.getElementById('status');
+    const updatedEl = document.getElementById('updated');
+    const latEl = document.getElementById('latitude');
+    const lonEl = document.getElementById('longitude');
+    const locationEl = document.getElementById('location');
+    const errorEl = document.getElementById('error');
+    const refreshButton = document.getElementById('refreshButton');
+
+    function formatTime(date) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    async function updateLocation() {
+      try {
+        statusEl.textContent = 'Updating...';
+        errorEl.textContent = '';
+
+        const response = await fetch(endpoint, { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`Server returned ${response.status}`);
+        }
+
+        const data = await response.json();
+        const lat = Number(data.lat).toFixed(6);
+        const lon = Number(data.lon).toFixed(6);
+
+        latEl.textContent = lat;
+        lonEl.textContent = lon;
+        locationEl.textContent = `Bus is currently at ${lat}, ${lon}`;
+        statusEl.textContent = 'Live update received';
+        updatedEl.textContent = formatTime(new Date());
+      } catch (error) {
+        statusEl.textContent = 'Unable to fetch location';
+        errorEl.textContent = 'Unable to load bus location. Check the server or your network connection.';
+        console.error('Location update failed:', error);
+      }
+    }
+
+    function startPolling() {
+      updateLocation();
+      setInterval(updateLocation, 3000);
+    }
+
+    refreshButton.addEventListener('click', updateLocation);
+    startPolling();
+  </script>
+</body>
+</html>
